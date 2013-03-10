@@ -227,7 +227,8 @@ def convert_text_to_html(text, profile):
     markup = profile.markup
     if markup == 'bbcode':
         renderbb = customize_postmarkup(profile.user.has_perm('djangobb_forum.post_external_links'))
-        text = re.sub(r'(?!\[\/?(b|i|u|s|link|url|quote|wiki|google|dictionary|dict|img|list|\*|big|small|color|center)(=.+)?])(\[(.*)\])', r'[[b][/b]\4]', text)
+        tagString = "|".join(tags)
+        text = re.sub(r'(?!\[\/?(' + tagString + ')(=.+)?])(\[(.*)\])', r'[[b][/b]\4]', text)
         text =  renderbb(text)
     elif markup == 'markdown':
         text = markdown.markdown(text, safe_mode='escape')
@@ -415,10 +416,19 @@ class QuoteTag(postmarkup.TagBase):
     def render_close(self, parser, node_index):
         return u'</blockquote>'
 
+def add_tag(tagType, BBCode, tagName=None, args=None, kwargs=None):
+    custom_postmarkup.tag_factory.add_tag(tagType, BBCode, tagName)
+    if (BBCode == "*") | (BBCode == "?") | (BBCode == ".") | (BBCode == "+"):
+        tags.append('\\' + BBCode)
+    else:
+        tags.append(BBCode)
+
 # This allows us to control the bb tags
 def customize_postmarkup(allow_external_links):
+    global tags
+    tags = []
+    global custom_postmarkup;
     custom_postmarkup = postmarkup.PostMarkup()
-    add_tag = custom_postmarkup.tag_factory.add_tag
     custom_postmarkup.tag_factory.set_default_tag(postmarkup.DefaultTag)
 
     add_tag(CSSClassTag, 'b', 'bb-bold')

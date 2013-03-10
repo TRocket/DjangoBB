@@ -227,7 +227,7 @@ def convert_text_to_html(text, profile):
     markup = profile.markup
     if markup == 'bbcode':
         renderbb = customize_postmarkup(profile.user.has_perm('djangobb_forum.post_external_links'))
-        
+        text = re.sub(r'(?!\[\/?(b|i|u|s|link|url|quote|wiki|google|dictionary|dict|img|list|\*|big|small|color|center)(=.+)?])(\[(.*)\])', r'[[b][/b]\4]', text)
         text =  renderbb(text)
     elif markup == 'markdown':
         text = markdown.markdown(text, safe_mode='escape')

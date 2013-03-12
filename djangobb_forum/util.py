@@ -228,6 +228,10 @@ def convert_text_to_html(text, profile):
     if markup == 'bbcode':
         renderbb = customize_postmarkup(profile.user.has_perm('djangobb_forum.post_external_links'))
         tagString = "|".join(tags)
+        coderegex = re.compile(r'([\S\s]*?)(\[code(?: .*?)??\].+?\[\/code\])?')
+        codes = coderegex.finditer(text)
+        for code in codes:
+            print code.start(), code.group(0, 1, 2)
         text = re.sub(r'(?!\[\/?(' + tagString + ')(=.+)?])(\[(.*)\])', r'[[]\4]', text)
         text =  renderbb(text)
     elif markup == 'markdown':
@@ -418,10 +422,7 @@ class QuoteTag(postmarkup.TagBase):
 
 def add_tag(tagType, BBCode, tagName=None, args=None, kwargs=None):
     custom_postmarkup.tag_factory.add_tag(tagType, BBCode, tagName)
-    if (BBCode == "*") | (BBCode == "?") | (BBCode == ".") | (BBCode == "+"):
-        tags.append('\\' + BBCode)
-    else:
-        tags.append(BBCode)
+    tags.append(re.escape(BBCode))
 
 # This allows us to control the bb tags
 def customize_postmarkup(allow_external_links):

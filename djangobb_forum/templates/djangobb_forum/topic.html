@@ -13,7 +13,7 @@
     {% paginate %}
     <ul>
         <li>
-        <a href="{% url djangobb:index %}">{% trans "Forums Home" %}</a> </li><li>&raquo; {% link topic.forum %} </li><li>&raquo; {{ topic.name }}
+        <a href="{% url djangobb:index %}">{% trans "Discussion Forums" %}</a> </li><li>&raquo; {% link topic.forum %} </li><li>&raquo; {{ topic.name }}
         <a href="{% url djangobb:forum_topic_feed topic.id %}"><img src="{{ STATIC_URL }}/djangobb_forum/img/feed-icon-small.png" alt="[RSS Feed]" title="[RSS Feed]" class="breadcrumb_rss" /></a>
         </li>
     </ul>
@@ -24,7 +24,7 @@
     <h2><span>{% trans "Poll" %}</span></h2>
     <div class="box">
         <div class="inbox"><p><strong>{{ poll.question }}</strong></p>
-        {% if poll_form %}       
+        {% if poll_form %}
             <form action="." method="post">{% csrf_token %}
             {{ poll_form }}
             {% if poll.choice_count > 1 %}
@@ -35,7 +35,7 @@
             <input type="submit" name="{{ poll_form.FORM_NAME }}" value="{% trans "Vote" %}" />
             </form>
         {% else %}
-            <ul>               
+            <ul>
             {% for choice in poll.choices.all %}
                 <li>
                     <div class="bar" style="width:{{ choice.percent|floatformat:0 }}%;" title="{{ choice.choice }}">&nbsp;</div>
@@ -89,7 +89,7 @@
                     </dl>
                 </div>
                 <div class="postright">
-                    <h3>{{ post.topic.name }}</h3>
+                    <h3>{{ topic.name }}</h3>
                     <div class="postmsg">
                         <div class="post_body_html">{{ post.body_html|safe }}</div>
                         {% if post.updated %}
@@ -106,13 +106,6 @@
                             </div>
                             {% endif %}
                         {% endif %}
-                        {% with post.attachments.all as attachments %}
-                            {% if attachments %}
-                                {% for attach in attachments %}
-                                    <p class="postedit"><em>{% trans "Attachments:" %} <br />{{ attach|attachment_link }}</em></p>
-                                {% endfor %}
-                            {% endif %}
-                        {% endwith %}
                     </div>
                 </div>
                 <div class="clearer"></div>
@@ -150,7 +143,7 @@
 <div class="linksb">
     {% paginate %}
     <ul>
-        <li><a href="{% url djangobb:index %}">{% trans "Forums Home" %}</a></li>
+        <li><a href="{% url djangobb:index %}">{% trans "Discussion Forums" %}</a></li>
         <li>&raquo; {% link topic.forum %} </li>
         <li>
             &raquo; {{ topic }} <a href="{% url djangobb:forum_topic_feed topic.id %}"><img src="{{ STATIC_URL }}/djangobb_forum/img/feed-icon-small.png" alt="[RSS Feed]" title="[RSS Feed]" class="breadcrumb_rss" /></a>
@@ -187,7 +180,7 @@
         </form>
     {% endif %}
     {% if moderator %}
-    <dl id="modcontrols"><dt><strong>{% trans "Moderator control" %}</strong></dt>    
+    <dl id="modcontrols"><dt><strong>{% trans "Moderator control" %}</strong></dt>
         <dd><a class="moderator-only" href="{% url djangobb:delete_posts topic.id %}">{% trans "Delete multiple posts" %}</a></dd>
         <dd><a class="moderator-only" href="{% url djangobb:move_posts topic.id %}">{% trans "Move multiple posts" %}</a></dd>
         <dd><a class="moderator-only" href="{% url djangobb:move_topic %}?topic_id={{ topic.id }}">{% trans "Move topic" %}</a></dd>

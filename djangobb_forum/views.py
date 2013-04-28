@@ -66,14 +66,10 @@ def index(request, full=True):
     cats = sorted(cats.values(), cmpdef)
 
     to_return = {'cats': cats,
-                'posts': Post.objects.count(),
-                'topics': Topic.objects.count(),
-                'users': User.objects.count(),
                 'users_online': users_online,
                 'online_count': users_count,
                 'online_truncated': online_truncated,
                 'guest_count': guest_count,
-                'last_user': User.objects.latest('date_joined')
                 }
     if full:
         return render(request, 'djangobb_forum/index.html', to_return)
@@ -134,7 +130,7 @@ def reports(request):
         new_reports = Report.objects.filter(zapped = False).order_by('-created')
         zapped_reports = Report.objects.filter(zapped = True).order_by('-created')[:10]
 
-        return render(request, 'djangobb_forum/reports.html', {'new_reports' : new_reports, 'zapped_reports' : zapped_reports})        
+        return render(request, 'djangobb_forum/reports.html', {'new_reports' : new_reports, 'zapped_reports' : zapped_reports})
     else:
         raise Http404
 
@@ -143,9 +139,12 @@ def search(request, full=True):
     template_dir = 'djangobb_forum/' if full else 'djangobb_forum/mobile/'
 
     def _render_search_form(form=None):
-        return render(request, template_dir + 'search_form.html', {'categories': Category.objects.all(),
-                'form': form,
-                })
+        # TODO: remove 'in' clause from following query
+        categories_with_forums = Category.objects.prefetch_related('forums')
+        return render(request, template_dir + 'search_form.html', {
+            'categories': categories_with_forums,
+            'form': form,
+        })
 
     if not 'action' in request.GET:
         return _render_search_form(form=PostSearchForm())
@@ -165,10 +164,11 @@ def search(request, full=True):
     posts = Post.objects.all().order_by('-created')
     user = request.user
     if not user.is_superuser:
-        user_groups = user.groups.all() or [] # need 'or []' for anonymous user otherwise: 'EmptyManager' object is not iterable 
+        user_groups = user.groups.all() or [] # need 'or []' for anonymous user otherwise: 'EmptyManager' object is not iterable
         viewable_category = viewable_category.filter(Q(groups__in=user_groups) | Q(groups__isnull=True))
 
-        topics = Topic.objects.filter(forum__category__in=viewable_category)
+        topics = Topic.objects.filter(forum__category__in=viewable_category) \
+            .select_related('last_post', 'last_post__user', 'user', 'forum')
         posts = Post.objects.filter(topic__forum__category__in=viewable_category)
 
     base_url = None
@@ -353,7 +353,7 @@ def show_forum(request, forum_id, full=True):
     forum = get_object_or_404(Forum, pk=forum_id)
     if not forum.category.has_access(request.user):
         return HttpResponseForbidden()
-    topics = forum.topics.order_by('-sticky', '-updated').select_related()
+    topics = forum.topics.order_by('-sticky', '-updated').select_related('last_post__user', 'user')
     moderator = request.user.is_superuser or\
         request.user in forum.moderators.all()
     to_return = {'categories': Category.objects.all(),
@@ -390,7 +390,10 @@ def show_topic(request, topic_id, full=True):
 
     if request.user.is_authenticated():
         topic.update_read(request.user)
-    posts = topic.posts.all().select_related()
+    # without specifying, following query wouldn't select related properly
+    posts = topic.posts.select_related('user__userprofile',
+        'user__forum_profile',
+        'updated_by').all()
     edit_start = timezone.now() - timedelta(minutes=1)
     edit_end = timezone.now()
     editable = posts.filter(created__range=(edit_start, edit_end)).filter(user_id=request.user.id)
@@ -403,7 +406,7 @@ def show_topic(request, topic_id, full=True):
         subscribed = True
     else:
         subscribed = False
-        
+
     # reply form
     reply_form = None
     form_url = None
@@ -431,7 +434,7 @@ def show_topic(request, topic_id, full=True):
 
     # handle poll, if exists
     poll_form = None
-    polls = topic.poll_set.all()        
+    polls = topic.poll_set.all()
     if not polls:
         poll = None
     else:
@@ -534,10 +537,10 @@ def add_topic(request, forum_id, full=True):
             },
             **post_form_kwargs
         )
- 
+
     # if creating a new topic and allowed
-    create_poll_form = forum_id and forum_settings.ALLOW_POLLS 
-        
+    create_poll_form = forum_id and forum_settings.ALLOW_POLLS
+
     poll_form = PollForm()
 
     context = {
